@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Tetto" />
+<title>Tetto's Health Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeede9;
+    --text: #1a1a1a;
+    --text-secondary: #666;
+    --text-tertiary: #999;
+    --border: rgba(0,0,0,0.12);
+    --border-secondary: rgba(0,0,0,0.2);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --info-bg: #E6F1FB;
+    --info-text: #185FA5;
+    --info-border: #B5D4F4;
+    --success-bg: #EAF3DE;
+    --success-text: #3B6D11;
+    --success-border: #C0DD97;
+    --warn-bg: #FAEEDA;
+    --warn-text: #854F0B;
+    --warn-border: #FAC775;
+    --purple-bg: #EEEDFE;
+    --purple-text: #534AB7;
+    --purple-border: #CECBF6;
+    --teal-bg: #E1F5EE;
+    --teal-text: #0F6E56;
+    --teal-border: #9FE1CB;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --bg-secondary: #2a2a28;
+      --bg-tertiary: #333330;
+      --text: #f0ede8;
+      --text-secondary: #aaa;
+      --text-tertiary: #777;
+      --border: rgba(255,255,255,0.1);
+      --border-secondary: rgba(255,255,255,0.18);
+      --info-bg: #0c2a44;
+      --info-text: #85B7EB;
+      --info-border: #185FA5;
+      --success-bg: #172b08;
+      --success-text: #97C459;
+      --success-border: #3B6D11;
+      --warn-bg: #2d1a04;
+      --warn-text: #EF9F27;
+      --warn-border: #854F0B;
+      --purple-bg: #1e1a4a;
+      --purple-text: #AFA9EC;
+      --purple-border: #534AB7;
+      --teal-bg: #042d20;
+      --teal-text: #5DCAA5;
+      --teal-border: #0F6E56;
+    }
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .app { max-width: 480px; margin: 0 auto; padding: 1rem 1rem 5rem; }
+  h1 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.25rem; }
+  .toast { background: var(--success-bg); color: var(--success-text); border-radius: var(--radius-md); padding: 8px 14px; font-size: 13px; margin-bottom: 1rem; display: none; border: 0.5px solid var(--success-border); }
+  .tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; }
+  .tab { flex: 1; padding: 8px 4px; border-radius: var(--radius-md); border: 0.5px solid var(--border); background: transparent; font-size: 13px; cursor: pointer; color: var(--text-secondary); font-weight: 400; }
+  .tab.active { background: var(--bg-secondary); color: var(--text); border-color: var(--border-secondary); font-weight: 500; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+  .quick-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .qbtn { padding: 6px 12px; border-radius: var(--radius-md); border: 0.5px solid var(--border-secondary); background: transparent; font-size: 13px; cursor: pointer; color: var(--text); }
+  .qbtn.selected { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+  .field-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .field-row label { font-size: 13px; color: var(--text-secondary); min-width: 80px; }
+  .field-row input, .field-row textarea, .field-row select {
+    flex: 1; font-size: 14px; padding: 7px 10px; border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-secondary); background: var(--bg-secondary);
+    color: var(--text); outline: none; font-family: inherit;
+  }
+  .field-row input:focus, .field-row textarea:focus, .field-row select:focus { border-color: #378ADD; }
+  textarea { resize: vertical; min-height: 64px; }
+  .save-btn {
+    width: 100%; padding: 12px; border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border-secondary); background: var(--bg-secondary);
+    font-size: 15px; font-weight: 500; cursor: pointer; color: var(--text); margin-top: 4px;
+  }
+  .save-btn:active { opacity: 0.7; }
+  .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 1rem; }
+  .metric { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.75rem; }
+  .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+  .metric-value { font-size: 22px; font-weight: 600; color: var(--text); }
+  .metric-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .log-entry { border-bottom: 0.5px solid var(--border); padding: 10px 0; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-date { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500; }
+  .log-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pill { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--bg-secondary); color: var(--text-secondary); border: 0.5px solid var(--border); }
+  .pill.food { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
+  .pill.poo { background: var(--warn-bg); color: var(--warn-text); border-color: var(--warn-border); }
+  .pill.calcium { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+  .pill.bath { background: var(--teal-bg); color: var(--teal-text); border-color: var(--teal-border); }
+  .pill.note { background: var(--purple-bg); color: var(--purple-text); border-color: var(--purple-border); }
+  .chart-wrap { position: relative; height: 160px; width: 100%; }
+  .empty { font-size: 13px; color: var(--text-tertiary); text-align: center; padding: 2rem 0; }
+  .delete-btn { float: right; background: transparent; border: none; color: var(--text-tertiary); font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .delete-btn:active { color: #E24B4A; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Tetto</h1>
+  <p class="subtitle">Health & behavior tracker</p>
+  <div class="toast" id="toast">Entry saved!</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('log')">Log today</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab" onclick="switchTab('charts')">Charts</button>
+  </div>
+
+  <!-- LOG TAB -->
+  <div class="section active" id="tab-log">
+    <div class="card">
+      <div class="card-title">Bugs</div>
+      <div class="quick-btns">
+        <button class="qbtn" onclick="toggleItem(this,'bug','Dubia roaches')">Dubia roaches</button>
+        <button class="qbtn" onclick="toggleItem(this,'bug','Hornworms')">Hornworms</button>
+        <button class="qbtn" onclick="toggleItem(this,'bug','Crickets')">Crickets</button>
+        <button class="qbtn" onclick="toggleItem(this,'bug','Superworms')">Superworms</button>
+      </div>
+      <div class="field-row">
+        <label>Total count</label>
+        <input type="number" id="bug-count" min="0" placeholder="How many?" inputmode="numeric" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Greens</div>
+      <div class="quick-btns">
+        <button class="qbtn" onclick="toggleItem(this,'green','Collard greens')">Collard greens</button>
+        <button class="qbtn" onclick="toggleItem(this,'green','Zucchini')">Zucchini</button>
+        <button class="qbtn" onclick="toggleItem(this,'green','Bell pepper')">Bell pepper</button>
+        <button class="qbtn" onclick="toggleItem(this,'green','Butternut squash')">Butternut squash</button>
+        <button class="qbtn" onclick="toggleItem(this,'green','Mustard greens')">Mustard greens</button>
+        <button class="qbtn" onclick="toggleItem(this,'green','Arugula')">Arugula</button>
+      </div>
+      <div class="field-row">
+        <label>Ate greens?</label>
+        <select id="greens-ate">
+          <option value="">—</option>
+          <option value="yes">Yes, willingly</option>
+          <option value="sneaky">Sneaky method</option>
+          <option value="no">Refused</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daily checks</div>
+      <div class="quick-btns">
+        <button class="qbtn" onclick="toggleItem(this,'check','poo')">Poo today</button>
+        <button class="qbtn" onclick="toggleItem(this,'check','calcium')">Calcium injection</button>
+        <button class="qbtn" onclick="toggleItem(this,'check','bath')">Bath</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Weight & notes</div>
+      <div class="field-row">
+        <label>Weight (g)</label>
+        <input type="number" id="weight-input" min="0" placeholder="Optional" inputmode="decimal" step="0.1" />
+      </div>
+      <div class="field-row" style="align-items:flex-start">
+        <label style="padding-top:6px">Notes</label>
+        <textarea id="notes-input" placeholder="Behavior, mood, anything notable..."></textarea>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveEntry()">Save entry</button>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="section" id="tab-history">
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="metric-label">Entries</div>
+        <div class="metric-value" id="stat-entries">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Injections</div>
+        <div class="metric-value" id="stat-injections">0</div>
+        <div class="metric-sub">logged</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Last weight</div>
+        <div class="metric-value" id="stat-weight">—</div>
+        <div class="metric-sub" id="stat-weight-date"></div>
+      </div>
+    </div>
+    <div class="card" id="history-list">
+      <div class="empty">No entries yet. Start logging!</div>
+    </div>
+  </div>
+
+  <!-- CHARTS TAB -->
+  <div class="section" id="tab-charts">
+    <div class="card">
+      <div class="card-title">Weight over time (g)</div>
+      <div class="chart-wrap"><canvas id="weight-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Bugs eaten per day</div>
+      <div class="chart-wrap"><canvas id="bugs-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Calcium injections</div>
+      <div class="chart-wrap"><canvas id="calcium-chart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selected = { bug: [], green: [], check: [] };
+let weightChart = null, bugsChart = null, calciumChart = null;
+
+function getEntries() {
+  try { return JSON.parse(localStorage.getItem('tetto_v1') || '[]'); } catch(e) { return []; }
+}
+function saveEntries(arr) { localStorage.setItem('tetto_v1', JSON.stringify(arr)); }
+
+function toggleItem(btn, type, name) {
+  btn.classList.toggle('selected');
+  if (selected[type].includes(name)) selected[type] = selected[type].filter(x => x !== name);
+  else selected[type].push(name);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'history') renderHistory();
+  if (tab === 'charts') renderCharts();
+}
+
+function saveEntry() {
+  const bugCount = document.getElementById('bug-count').value;
+  const greensAte = document.getElementById('greens-ate').value;
+  const weight = document.getElementById('weight-input').value;
+  const notes = document.getElementById('notes-input').value.trim();
+
+  const now = new Date();
+  const entry = {
+    id: Date.now(),
+    date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    dateISO: now.toISOString().split('T')[0],
+    bugs: selected.bug.length ? { types: [...selected.bug], count: bugCount ? parseInt(bugCount) : null } : null,
+    greens: (selected.green.length || greensAte) ? { types: [...selected.green], ate: greensAte || null } : null,
+    poo: selected.check.includes('poo'),
+    calcium: selected.check.includes('calcium'),
+    bath: selected.check.includes('bath'),
+    weight: weight ? parseFloat(weight) : null,
+    notes: notes || null
+  };
+
+  const entries = getEntries();
+  entries.unshift(entry);
+  saveEntries(entries);
+
+  selected = { bug: [], green: [], check: [] };
+  document.querySelectorAll('.qbtn.selected').forEach(b => b.classList.remove('selected'));
+  document.getElementById('bug-count').value = '';
+  document.getElementById('greens-ate').value = '';
+  document.getElementById('weight-input').value = '';
+  document.getElementById('notes-input').value = '';
+
+  const toast = document.getElementById('toast');
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 2000);
+}
+
+function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  const entries = getEntries().filter(e => e.id !== id);
+  saveEntries(entries);
+  renderHistory();
+}
+
+function renderHistory() {
+  const entries = getEntries();
+  const injCount = entries.filter(e => e.calcium).length;
+  const withWeight = entries.filter(e => e.weight);
+
+  document.getElementById('stat-entries').textContent = entries.length;
+  document.getElementById('stat-injections').textContent = injCount;
+  if (withWeight.length) {
+    document.getElementById('stat-weight').textContent = withWeight[0].weight + 'g';
+    document.getElementById('stat-weight-date').textContent = withWeight[0].date;
+  } else {
+    document.getElementById('stat-weight').textContent = '—';
+    document.getElementById('stat-weight-date').textContent = '';
+  }
+
+  const list = document.getElementById('history-list');
+  if (!entries.length) { list.innerHTML = '<div class="empty">No entries yet. Start logging!</div>'; return; }
+
+  list.innerHTML = entries.map(e => {
+    let pills = [];
+    if (e.bugs) {
+      const label = (e.bugs.count ? e.bugs.count + 'x ' : '') + (e.bugs.types.join(', ') || 'bugs');
+      pills.push(`<span class="pill food">${label}</span>`);
+    }
+    if (e.greens) {
+      const gLabel = e.greens.ate === 'sneaky' ? 'greens (sneaky)' : e.greens.ate === 'yes' ? 'ate greens' : e.greens.ate === 'no' ? 'refused greens' : 'greens offered';
+      pills.push(`<span class="pill food">${gLabel}</span>`);
+    }
+    if (e.poo) pills.push('<span class="pill poo">poo</span>');
+    if (e.calcium) pills.push('<span class="pill calcium">calcium inj.</span>');
+    if (e.bath) pills.push('<span class="pill bath">bath</span>');
+    if (e.weight) pills.push(`<span class="pill">${e.weight}g</span>`);
+    if (e.notes) pills.push(`<span class="pill note">${e.notes.slice(0,50)}${e.notes.length > 50 ? '…' : ''}</span>`);
+
+    return `<div class="log-entry">
+      <div class="log-date">${e.date} <button class="delete-btn" onclick="deleteEntry(${e.id})">×</button></div>
+      <div class="log-pills">${pills.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCharts() {
+  const entries = [...getEntries()].reverse();
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const textColor = isDark ? '#aaa' : '#666';
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: textColor, font: { size: 10 }, maxRotation: 45 }, grid: { color: gridColor } },
+      y: { ticks: { color: textColor, font: { size: 11 } }, grid: { color: gridColor } }
+    }
+  };
+
+  const wEntries = entries.filter(e => e.weight);
+  const wCtx = document.getElementById('weight-chart').getContext('2d');
+  if (weightChart) weightChart.destroy();
+  weightChart = new Chart(wCtx, {
+    type: 'line',
+    data: {
+      labels: wEntries.map(e => e.date),
+      datasets: [{ data: wEntries.map(e => e.weight), borderColor: '#378ADD', backgroundColor: 'transparent', tension: 0.3, pointRadius: 4, pointBackgroundColor: '#378ADD' }]
+    },
+    options: { ...baseOpts }
+  });
+
+  const bEntries = entries.filter(e => e.bugs && e.bugs.count);
+  const bCtx = document.getElementById('bugs-chart').getContext('2d');
+  if (bugsChart) bugsChart.destroy();
+  bugsChart = new Chart(bCtx, {
+    type: 'bar',
+    data: {
+      labels: bEntries.map(e => e.date),
+      datasets: [{ data: bEntries.map(e => e.bugs.count), backgroundColor: '#5DCAA5', borderRadius: 4 }]
+    },
+    options: { ...baseOpts }
+  });
+
+  const last30 = entries.slice(-30);
+  const cCtx = document.getElementById('calcium-chart').getContext('2d');
+  if (calciumChart) calciumChart.destroy();
+  calciumChart = new Chart(cCtx, {
+    type: 'bar',
+    data: {
+      labels: last30.map(e => e.date),
+      datasets: [{ data: last30.map(e => e.calcium ? 1 : 0), backgroundColor: '#85B7EB', borderRadius: 4, barThickness: 10 }]
+    },
+    options: { ...baseOpts, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, max: 1, ticks: { ...baseOpts.scales.y.ticks, stepSize: 1, callback: v => v === 1 ? 'yes' : '' } } } }
+  });
+}
+</script>
+</body>
+</html>
